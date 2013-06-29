@@ -161,6 +161,8 @@ namespace MagicalBlockSmackdown
                 spaceDown = false;
             }
 
+            model.update(gameTime);
+
             base.Update(gameTime);
         }
 

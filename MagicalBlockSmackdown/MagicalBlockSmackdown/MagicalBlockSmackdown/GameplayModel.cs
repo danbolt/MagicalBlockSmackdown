@@ -77,7 +77,10 @@ namespace MagicalBlockSmackdown
             {
                 for (int j = 4; j < grid.GetLength(1); j++)
                 {
-                    grid[i, j] = new Panel((PanelColor)(Game1.GameRandom.Next() % NumberOfPanelColors), PanelState.Alive);
+                    if (Game1.GameRandom.Next() % 2 == 0)
+                    {
+                        grid[i, j] = new Panel((PanelColor)(Game1.GameRandom.Next() % NumberOfPanelColors), PanelState.Alive);
+                    }
                 }
             }
         }
@@ -90,14 +93,51 @@ namespace MagicalBlockSmackdown
             }
             
             //fix this into something nice later
-            Panel swap = grid[x, y];
-            grid[x, y] = grid[x + 1, y];
-            grid[x + 1, y] = swap;
+            switchTwoTiles(x, y, x + 1, y);
+        }
+
+        private void switchTwoTiles(int x1, int y1, int x2, int y2)
+        {
+            Panel swap = grid[x1, y1];
+            grid[x1, y1] = grid[x2, y2];
+            grid[x2, y2] = swap;
         }
 
         public void update(GameTime currentTime)
         {
-            return;
+            for (int i = 0; i < grid.GetLength(0); i++)
+            {
+                for (int j = 0; j < grid.GetLength(1); j++)
+                {
+                    if (grid[i, j].state == PanelState.None)
+                    {
+                        continue;
+                    }
+                    else if (grid[i, j].state == PanelState.Alive)
+                    {
+                        //start falling if there's empty space below
+                        if (j < grid.GetLength(1) - 1 && grid[i, j + 1].state == PanelState.None)
+                        {
+                            grid[i, j].state = PanelState.Falling;
+                        }
+                    }
+                    else if (grid[i, j].state == PanelState.Falling)
+                    {
+                        if (j >= grid.GetLength(1) - 1 || grid[i, j + 1].state != PanelState.None)
+                        {
+                            grid[i, j].state = PanelState.Alive;
+                        }
+                        else if (j < grid.GetLength(1) - 1 && grid[i, j + 1].state == PanelState.None)
+                        {
+                            switchTwoTiles(i, j, i, j + 1);
+                        }
+                    }
+                    else if (grid[i, j].state == PanelState.Exploding)
+                    {
+                        continue;
+                    }
+                }
+            }
         }
     }
 }
