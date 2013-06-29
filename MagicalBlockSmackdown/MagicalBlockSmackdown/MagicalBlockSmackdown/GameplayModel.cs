@@ -6,6 +6,7 @@ namespace MagicalBlockSmackdown
 {
     class GameplayModel
     {
+        public const int NumberOfPanelColors = 6;
         public enum PanelColor
         {
             Red = 0,
@@ -71,6 +72,27 @@ namespace MagicalBlockSmackdown
         public GameplayModel()
         {
             grid = new Panel[gridWidth, gridHeight];
+
+            for (int i = 0; i < grid.GetLength(0); i++)
+            {
+                for (int j = 4; j < grid.GetLength(1); j++)
+                {
+                    grid[i, j] = new Panel((PanelColor)(Game1.GameRandom.Next() % NumberOfPanelColors), PanelState.Alive);
+                }
+            }
+        }
+
+        public void pushSwap(int x, int y)
+        {
+            if (x < 0 || y < 0 || x > gridWidth - 2 || y > gridHeight - 1)
+            {
+                return;
+            }
+            
+            //fix this into something nice later
+            Panel swap = grid[x, y];
+            grid[x, y] = grid[x + 1, y];
+            grid[x + 1, y] = swap;
         }
 
         public void update(GameTime currentTime)

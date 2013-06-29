@@ -22,12 +22,27 @@ namespace MagicalBlockSmackdown
         private static Texture2D whitePixel = null;
         public static Texture2D WhitePixel { get { return whitePixel; } }
 
+        private static Random gameRand = null;
+        public static Random GameRandom { get { return gameRand; } }
+
         private GameplayModel model = null;
+
+        private int cursorX = 0;
+        private int cursorY = 0;
+        private Color cursorShade = new Color(0.15f, 0.15f, 0.15f, 0.5f);
+
+        private bool rightDown = false;
+        private bool leftDown = false;
+        private bool downDown = false;
+        private bool upDown = false;
+        private bool spaceDown = false;
 
         public Game1()
         {
             graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
+
+            gameRand = new Random();
 
             model = new GameplayModel();
         }
@@ -63,7 +78,7 @@ namespace MagicalBlockSmackdown
         /// </summary>
         protected override void UnloadContent()
         {
-            // TODO: Unload any non ContentManager content here
+            //
         }
 
         /// <summary>
@@ -77,7 +92,74 @@ namespace MagicalBlockSmackdown
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed)
                 this.Exit();
 
-            // TODO: Add your update logic here
+            KeyboardState ks = Keyboard.GetState();
+
+            if (ks.IsKeyDown(Keys.Right) && !rightDown)
+            {
+                if (cursorX < model.Grid.GetLength(0) - 2)
+                {
+                    cursorX++;
+                }
+
+                rightDown = true;
+            }
+            else if (!ks.IsKeyDown(Keys.Right) && rightDown)
+            {
+                rightDown = false;
+            }
+
+            if (ks.IsKeyDown(Keys.Left) && !leftDown)
+            {
+                if (cursorX > 0)
+                {
+                    cursorX--;
+                }
+
+                leftDown = true;
+            }
+            else if (!ks.IsKeyDown(Keys.Left) && leftDown)
+            {
+                leftDown = false;
+            }
+
+            if (ks.IsKeyDown(Keys.Down) && !downDown)
+            {
+                if (cursorY < model.Grid.GetLength(1) - 1)
+                {
+                    cursorY++;
+                }
+
+                downDown = true;
+            }
+            else if (!ks.IsKeyDown(Keys.Down) && downDown)
+            {
+                downDown = false;
+            }
+
+            if (ks.IsKeyDown(Keys.Up) && !upDown)
+            {
+                if (cursorY > 0)
+                {
+                    cursorY--;
+                }
+
+                upDown = true;
+            }
+            else if (!ks.IsKeyDown(Keys.Up) && upDown)
+            {
+                upDown = false;
+            }
+
+            if (ks.IsKeyDown(Keys.Space) && !spaceDown)
+            {
+                model.pushSwap(cursorX, cursorY);
+
+                spaceDown = true;
+            }
+            else if (!ks.IsKeyDown(Keys.Space) && spaceDown)
+            {
+                spaceDown = false;
+            }
 
             base.Update(gameTime);
         }
@@ -105,6 +187,9 @@ namespace MagicalBlockSmackdown
                     spriteBatch.Draw(whitePixel, drawPos, null, model.Grid[i, j].PanelColorValue(), 0.0f, Vector2.Zero, 16f, SpriteEffects.None, 0.5f);
                 }
             }
+
+            spriteBatch.Draw(whitePixel, new Vector2(100, 100) + new Vector2(cursorX * 16, cursorY * 16), null, cursorShade, 0.0f, Vector2.Zero, 16f, SpriteEffects.None, 0.5f);
+            spriteBatch.Draw(whitePixel, new Vector2(100, 100) + new Vector2((cursorX + 1) * 16, cursorY * 16), null, cursorShade, 0.0f, Vector2.Zero, 16f, SpriteEffects.None, 0.5f);
             spriteBatch.End();
 
             base.Draw(gameTime);
