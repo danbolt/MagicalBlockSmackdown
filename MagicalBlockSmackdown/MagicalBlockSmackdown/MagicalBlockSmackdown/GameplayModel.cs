@@ -22,7 +22,7 @@ namespace MagicalBlockSmackdown
             None = 0,
             Alive = 1,
             Falling = 2,
-            Exploding = 2,
+            Exploding = 3,
         }
 
         public struct Panel
@@ -40,6 +40,11 @@ namespace MagicalBlockSmackdown
             {
                 state = PanelState.Alive;
                 this.color = color;
+            }
+
+            public void explode()
+            {
+                state = PanelState.Exploding;
             }
 
             public Color PanelColorValue()
@@ -77,6 +82,8 @@ namespace MagicalBlockSmackdown
             {
                 for (int j = 4; j < grid.GetLength(1); j++)
                 {
+                    grid[i, j].state = PanelState.None;
+
                     if (Game1.GameRandom.Next() % 2 == 0)
                     {
                         grid[i, j] = new Panel((PanelColor)(Game1.GameRandom.Next() % NumberOfPanelColors), PanelState.Alive);
@@ -91,6 +98,11 @@ namespace MagicalBlockSmackdown
             {
                 return;
             }
+
+            if ((grid[x, y].state != PanelState.Alive && grid[x, y].state != PanelState.None) || (grid[x + 1, y].state != PanelState.Alive && grid[x + 1, y].state != PanelState.None))
+            {
+                return;
+            }
             
             //fix this into something nice later
             switchTwoTiles(x, y, x + 1, y);
@@ -101,6 +113,90 @@ namespace MagicalBlockSmackdown
             Panel swap = grid[x1, y1];
             grid[x1, y1] = grid[x2, y2];
             grid[x2, y2] = swap;
+        }
+
+        private bool checkHorzontalMatch(int x, int y)
+        {
+            if (grid[x, y].state != PanelState.Alive)
+            {
+                return false;
+            }
+
+            if (x > 0 && x < grid.GetLength(0) - 1)
+            {
+                if ((grid[x, y].color == grid[x - 1, y].color && grid[x - 1, y].state == PanelState.Alive) && (grid[x, y].color == grid[x + 1, y].color && grid[x + 1, y].state == PanelState.Alive))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool checkVerticalMatch(int x, int y)
+        {
+            if (grid[x, y].state != PanelState.Alive)
+            {
+                return false;
+            }
+
+            if (y > 0 && y < grid.GetLength(1) - 1)
+            {
+                if ((grid[x, y].color == grid[x, y - 1].color && grid[x, y - 1].state == PanelState.Alive) && (grid[x, y].color == grid[x, y + 1].color && grid[x, y + 1].state == PanelState.Alive))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void explodePanels(int x, int y, bool horizontal, bool vertical)
+        {
+            if (grid[x, y].state != PanelState.Alive || x < 0 || y < 0 || x >= grid.GetLength(0) || y >= grid.GetLength(1))
+            {
+                return;
+            }
+
+            grid[x, y].explode();
+
+            if (horizontal)
+            {
+                if (x - 1 >= 0)
+                {
+                    if (grid[x, y].color == grid[x - 1, y].color)
+                    {
+                        explodePanels(x - 1, y, true, false);
+                    }
+                }
+
+                if (x + 1 < gridWidth)
+                {
+                    if (grid[x, y].color == grid[x + 1, y].color)
+                    {
+                        explodePanels(x + 1, y, true, false);
+                    }
+                }
+            }
+
+            if (vertical)
+            {
+                if (y - 1 >= 0)
+                {
+                    if (grid[x, y].color == grid[x, y - 1].color)
+                    {
+                        explodePanels(x, y - 1, false, true);
+                    }
+                }
+
+                if (y + 1 < gridHeight)
+                {
+                    if (grid[x, y].color == grid[x, y + 1].color)
+                    {
+                        explodePanels(x, y + 1, false, true);
+                    }
+                }
+            }
         }
 
         public void update(GameTime currentTime)
@@ -119,6 +215,13 @@ namespace MagicalBlockSmackdown
                         if (j < grid.GetLength(1) - 1 && grid[i, j + 1].state == PanelState.None)
                         {
                             grid[i, j].state = PanelState.Falling;
+                        }
+                        else
+                        {
+                            if (checkHorzontalMatch(i, j) || checkVerticalMatch(i, j))
+                            {
+                                explodePanels(i, j, checkHorzontalMatch(i, j), checkVerticalMatch(i, j));
+                            }
                         }
                     }
                     else if (grid[i, j].state == PanelState.Falling)

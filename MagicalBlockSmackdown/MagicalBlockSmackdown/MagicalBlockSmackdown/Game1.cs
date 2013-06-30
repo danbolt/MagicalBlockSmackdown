@@ -187,6 +187,11 @@ namespace MagicalBlockSmackdown
                     Vector2 drawPos = new Vector2(100, 100) + new Vector2(i * 16, j * 16);
 
                     spriteBatch.Draw(whitePixel, drawPos, null, model.Grid[i, j].PanelColorValue(), 0.0f, Vector2.Zero, 16f, SpriteEffects.None, 0.5f);
+
+                    if (model.Grid[i, j].state == GameplayModel.PanelState.Exploding)
+                    {
+                        spriteBatch.Draw(whitePixel, drawPos + new Vector2(4), null, Color.Black, 0.0f, Vector2.Zero, 8, SpriteEffects.None, 0.5f);
+                    }
                 }
             }
 
