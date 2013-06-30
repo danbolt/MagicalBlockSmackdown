@@ -29,11 +29,15 @@ namespace MagicalBlockSmackdown
         {
             public PanelColor color;
             public PanelState state;
+            public float explodingTime;
+            public const float explodingDuration = 300f;
 
             public Panel(PanelColor color, PanelState state)
             {
                 this.color = color;
                 this.state = state;
+
+                this.explodingTime = 0;
             }
 
             public void activate(PanelColor color)
@@ -45,6 +49,7 @@ namespace MagicalBlockSmackdown
             public void explode()
             {
                 state = PanelState.Exploding;
+                explodingTime = 0;
             }
 
             public Color PanelColorValue()
@@ -203,7 +208,7 @@ namespace MagicalBlockSmackdown
         {
             for (int i = 0; i < grid.GetLength(0); i++)
             {
-                for (int j = 0; j < grid.GetLength(1); j++)
+                for (int j = grid.GetLength(1) - 1; j >= 0; j--)
                 {
                     if (grid[i, j].state == PanelState.None)
                     {
@@ -237,7 +242,12 @@ namespace MagicalBlockSmackdown
                     }
                     else if (grid[i, j].state == PanelState.Exploding)
                     {
-                        continue;
+                        grid[i, j].explodingTime += currentTime.ElapsedGameTime.Milliseconds;
+
+                        if (grid[i, j].explodingTime > Panel.explodingDuration)
+                        {
+                            grid[i, j].state = PanelState.None;
+                        }
                     }
                 }
             }
