@@ -6,6 +6,11 @@ namespace MagicalBlockSmackdown
 {
     class GameplayModel
     {
+        public enum GameplayModelState
+        {
+            Active,
+        }
+
         public const int NumberOfPanelColors = 6;
         public enum PanelColor
         {
@@ -76,12 +81,33 @@ namespace MagicalBlockSmackdown
 
         private const int gridWidth = 6;
         private const int gridHeight = 12;
+        public int GridWidth { get { return gridWidth; } }
+        public int GridHeight { get { return gridHeight; } }
         private Panel[,] grid;
         public Panel[,] Grid { get { return grid; } }
+        private GameplayModelState modelState;
+
+        private float pushingUpTime;
+        private float pushingUpDuration = 3000f;
+        public float PushingUpValue { get { return pushingUpTime / pushingUpDuration; } }
+        private Panel[] nextLineOfPanels;
+        public Panel[] NextLineOfPanels { get { return nextLineOfPanels; } }
+
+        private int cursorX = 0;
+        public int CursorX { get { return cursorX; } set { cursorX = value; } }
+        private int cursorY = 0;
+        public int CursorY { get { return cursorY; } set { cursorY = value; } }
 
         public GameplayModel()
         {
+            modelState = GameplayModelState.Active;
+
             grid = new Panel[gridWidth, gridHeight];
+            nextLineOfPanels = new Panel[gridWidth];
+            scrambleNextLineOfPanels();
+
+            cursorX = grid.GetLength(0) / 2 - 1;
+            cursorY = grid.GetLength(1) / 2;
 
             for (int i = 0; i < grid.GetLength(0); i++)
             {
@@ -99,6 +125,11 @@ namespace MagicalBlockSmackdown
 
         public void pushSwap(int x, int y)
         {
+            if (modelState != GameplayModelState.Active)
+            {
+                return;
+            }
+
             if (x < 0 || y < 0 || x > gridWidth - 2 || y > gridHeight - 1)
             {
                 return;
@@ -204,49 +235,90 @@ namespace MagicalBlockSmackdown
             }
         }
 
-        public void update(GameTime currentTime)
+        private void scrambleNextLineOfPanels()
         {
             for (int i = 0; i < grid.GetLength(0); i++)
             {
-                for (int j = grid.GetLength(1) - 1; j >= 0; j--)
+                nextLineOfPanels[i] = new Panel((PanelColor)(Game1.GameRandom.Next() % 6), PanelState.Alive);
+            }
+        }
+
+        private void pushUpNextRow()
+        {
+            for (int i = 0; i < grid.GetLength(0); i++)
+            {
+                for (int j = 0; j < grid.GetLength(1) - 1; j++)
                 {
-                    if (grid[i, j].state == PanelState.None)
+                    grid[i, j] = grid[i, j + 1];
+                }
+            }
+
+            for (int i = 0; i < grid.GetLength(0); i++)
+            {
+                grid[i, grid.GetLength(1) - 1] = nextLineOfPanels[i];
+            }
+
+            if (cursorY > 1)
+            {
+                cursorY--;
+            }
+
+            scrambleNextLineOfPanels();
+        }
+
+        public void update(GameTime currentTime)
+        {
+            if (modelState == GameplayModelState.Active)
+            {
+                pushingUpTime += currentTime.ElapsedGameTime.Milliseconds;
+                if (pushingUpTime > pushingUpDuration)
+                {
+                    pushingUpTime = 0;
+                    pushUpNextRow();
+                }
+
+                for (int i = 0; i < grid.GetLength(0); i++)
+                {
+                    for (int j = grid.GetLength(1) - 1; j >= 0; j--)
                     {
-                        continue;
-                    }
-                    else if (grid[i, j].state == PanelState.Alive)
-                    {
-                        //start falling if there's empty space below
-                        if (j < grid.GetLength(1) - 1 && grid[i, j + 1].state == PanelState.None)
+                        if (grid[i, j].state == PanelState.None)
                         {
-                            grid[i, j].state = PanelState.Falling;
+                            continue;
                         }
-                        else
+                        else if (grid[i, j].state == PanelState.Alive)
                         {
-                            if (checkHorzontalMatch(i, j) || checkVerticalMatch(i, j))
+                            //start falling if there's empty space below
+                            if (j < grid.GetLength(1) - 1 && grid[i, j + 1].state == PanelState.None)
                             {
-                                explodePanels(i, j, checkHorzontalMatch(i, j), checkVerticalMatch(i, j));
+                                grid[i, j].state = PanelState.Falling;
+                            }
+                            else
+                            {
+                                if (checkHorzontalMatch(i, j) || checkVerticalMatch(i, j))
+                                {
+                                    explodePanels(i, j, checkHorzontalMatch(i, j), checkVerticalMatch(i, j));
+                                }
                             }
                         }
-                    }
-                    else if (grid[i, j].state == PanelState.Falling)
-                    {
-                        if (j >= grid.GetLength(1) - 1 || grid[i, j + 1].state != PanelState.None)
+                        else if (grid[i, j].state == PanelState.Falling)
                         {
-                            grid[i, j].state = PanelState.Alive;
+                            if (j >= grid.GetLength(1) - 1 || grid[i, j + 1].state != PanelState.None)
+                            {
+                                grid[i, j].state = PanelState.Alive;
+                            }
+                            else if (j < grid.GetLength(1) - 1 && grid[i, j + 1].state == PanelState.None)
+                            {
+                                switchTwoTiles(i, j, i, j + 1);
+                            }
                         }
-                        else if (j < grid.GetLength(1) - 1 && grid[i, j + 1].state == PanelState.None)
+                        else if (grid[i, j].state == PanelState.Exploding)
                         {
-                            switchTwoTiles(i, j, i, j + 1);
-                        }
-                    }
-                    else if (grid[i, j].state == PanelState.Exploding)
-                    {
-                        grid[i, j].explodingTime += currentTime.ElapsedGameTime.Milliseconds;
+                            grid[i, j].explodingTime += currentTime.ElapsedGameTime.Milliseconds;
 
-                        if (grid[i, j].explodingTime > Panel.explodingDuration)
-                        {
-                            grid[i, j].state = PanelState.None;
+                            if (grid[i, j].explodingTime > Panel.explodingDuration)
+                            {
+                                grid[i, j].state = PanelState.None;
+                            }
                         }
                     }
                 }

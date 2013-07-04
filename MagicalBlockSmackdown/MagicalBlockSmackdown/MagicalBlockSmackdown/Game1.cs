@@ -22,14 +22,15 @@ namespace MagicalBlockSmackdown
         private static Texture2D whitePixel = null;
         public static Texture2D WhitePixel { get { return whitePixel; } }
 
+        private static Texture2D tileSheet = null;
+        public static Texture2D TileSheet { get { return tileSheet; } }
+
         private static Random gameRand = null;
         public static Random GameRandom { get { return gameRand; } }
 
         private GameplayModel model = null;
 
-        private int cursorX = 0;
-        private int cursorY = 0;
-        private Color cursorShade = new Color(0.15f, 0.15f, 0.15f, 0.5f);
+        private float cursorAnimationTime = 0;
 
         private bool rightDown = false;
         private bool leftDown = false;
@@ -70,6 +71,7 @@ namespace MagicalBlockSmackdown
             spriteBatch = new SpriteBatch(GraphicsDevice);
 
             whitePixel = Utilities.ColorTexture.Create(GraphicsDevice, Color.White);
+            tileSheet = Content.Load<Texture2D>("tilesheet");
         }
 
         /// <summary>
@@ -92,13 +94,15 @@ namespace MagicalBlockSmackdown
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed)
                 this.Exit();
 
+            cursorAnimationTime += gameTime.ElapsedGameTime.Milliseconds;
+
             KeyboardState ks = Keyboard.GetState();
 
             if (ks.IsKeyDown(Keys.Right) && !rightDown)
             {
-                if (cursorX < model.Grid.GetLength(0) - 2)
+                if (model.CursorX < model.Grid.GetLength(0) - 2)
                 {
-                    cursorX++;
+                    model.CursorX++;
                 }
 
                 rightDown = true;
@@ -110,9 +114,9 @@ namespace MagicalBlockSmackdown
 
             if (ks.IsKeyDown(Keys.Left) && !leftDown)
             {
-                if (cursorX > 0)
+                if (model.CursorX > 0)
                 {
-                    cursorX--;
+                    model.CursorX--;
                 }
 
                 leftDown = true;
@@ -124,9 +128,9 @@ namespace MagicalBlockSmackdown
 
             if (ks.IsKeyDown(Keys.Down) && !downDown)
             {
-                if (cursorY < model.Grid.GetLength(1) - 1)
+                if (model.CursorY < model.Grid.GetLength(1) - 1)
                 {
-                    cursorY++;
+                    model.CursorY++;
                 }
 
                 downDown = true;
@@ -138,9 +142,9 @@ namespace MagicalBlockSmackdown
 
             if (ks.IsKeyDown(Keys.Up) && !upDown)
             {
-                if (cursorY > 0)
+                if (model.CursorY > 1)
                 {
-                    cursorY--;
+                    model.CursorY--;
                 }
 
                 upDown = true;
@@ -152,7 +156,7 @@ namespace MagicalBlockSmackdown
 
             if (ks.IsKeyDown(Keys.Space) && !spaceDown)
             {
-                model.pushSwap(cursorX, cursorY);
+                model.pushSwap(model.CursorX, model.CursorY);
 
                 spaceDown = true;
             }
@@ -174,7 +178,7 @@ namespace MagicalBlockSmackdown
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
 
-            spriteBatch.Begin();
+            spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.NonPremultiplied, SamplerState.PointClamp, null, null);
             for (int i = 0; i < model.Grid.GetLength(0); i++)
             {
                 for (int j = 0; j < model.Grid.GetLength(1); j++)
@@ -184,9 +188,9 @@ namespace MagicalBlockSmackdown
                         continue;
                     }
 
-                    Vector2 drawPos = new Vector2(100, 100) + new Vector2(i * 16, j * 16);
+                    Vector2 drawPos = new Vector2(100, 100 - (model.PushingUpValue * 16)) + new Vector2(i * 16, j * 16);
 
-                    spriteBatch.Draw(whitePixel, drawPos, null, model.Grid[i, j].PanelColorValue(), 0.0f, Vector2.Zero, 16f, SpriteEffects.None, 0.5f);
+                    spriteBatch.Draw(tileSheet, drawPos, new Rectangle((int)(model.Grid[i, j].color) * 16, 0, 16, 16), Color.White, 0.0f, Vector2.Zero, 1, SpriteEffects.None, 0.5f);
 
                     if (model.Grid[i, j].state == GameplayModel.PanelState.Exploding)
                     {
@@ -195,8 +199,31 @@ namespace MagicalBlockSmackdown
                 }
             }
 
-            spriteBatch.Draw(whitePixel, new Vector2(100, 100) + new Vector2(cursorX * 16, cursorY * 16), null, cursorShade, 0.0f, Vector2.Zero, 16f, SpriteEffects.None, 0.5f);
-            spriteBatch.Draw(whitePixel, new Vector2(100, 100) + new Vector2((cursorX + 1) * 16, cursorY * 16), null, cursorShade, 0.0f, Vector2.Zero, 16f, SpriteEffects.None, 0.5f);
+            for (int i = 0; i < model.NextLineOfPanels.Length; i++)
+            {
+                if (model.NextLineOfPanels[i].state == GameplayModel.PanelState.None)
+                {
+                    continue;
+                }
+
+                Vector2 drawPos = new Vector2(100, 100 - (model.PushingUpValue * 16)) + new Vector2(i * 16, model.Grid.GetLength(1) * 16);
+
+                spriteBatch.Draw(tileSheet, drawPos, new Rectangle((int)(model.NextLineOfPanels[i].color) * 16, 0, 16, 16), Color.White, 0.0f, Vector2.Zero, 1, SpriteEffects.None, 0.5f);
+            }
+
+            if ((int)(cursorAnimationTime / 500) % 2 == 0)
+            {
+                spriteBatch.Draw(tileSheet, new Vector2(98, 98 - (model.PushingUpValue * 16)) + new Vector2(model.CursorX * 16, model.CursorY * 16), new Rectangle(14, 30, 19, 19), Color.White, 0.0f, Vector2.Zero, 1, SpriteEffects.None, 0.5f);
+                spriteBatch.Draw(tileSheet, new Vector2(98, 98 - (model.PushingUpValue * 16)) + new Vector2((model.CursorX + 1) * 16, model.CursorY * 16), new Rectangle(14, 30, 19, 19), Color.White, 0.0f, Vector2.Zero, 1, SpriteEffects.None, 0.5f);
+            }
+            else
+            {
+                spriteBatch.Draw(tileSheet, new Vector2(98, 98 - (model.PushingUpValue * 16)) + new Vector2(model.CursorX * 16, model.CursorY * 16), new Rectangle(46, 30, 19, 19), Color.White, 0.0f, Vector2.Zero, 1, SpriteEffects.None, 0.5f);
+                spriteBatch.Draw(tileSheet, new Vector2(98, 98 - (model.PushingUpValue * 16)) + new Vector2((model.CursorX + 1) * 16, model.CursorY * 16), new Rectangle(46, 30, 19, 19), Color.White, 0.0f, Vector2.Zero, 1, SpriteEffects.None, 0.5f);
+            }
+
+            spriteBatch.Draw(whitePixel, new Vector2(100, 0), null, Color.Black, 0.0f, Vector2.Zero, new Vector2(96, 100), SpriteEffects.None, 0.5f);
+            spriteBatch.Draw(whitePixel, new Vector2(100, 100 + (model.Grid.GetLength(1) * 16)), null, Color.Black, 0.0f, Vector2.Zero, new Vector2(96, 64), SpriteEffects.None, 0.5f);
             spriteBatch.End();
 
             base.Draw(gameTime);
