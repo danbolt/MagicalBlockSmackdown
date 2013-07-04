@@ -88,7 +88,7 @@ namespace MagicalBlockSmackdown
         private GameplayModelState modelState;
 
         private float pushingUpTime;
-        private float pushingUpDuration = 3000f;
+        private float pushingUpDuration = 4500;
         public float PushingUpValue { get { return pushingUpTime / pushingUpDuration; } }
         private Panel[] nextLineOfPanels;
         public Panel[] NextLineOfPanels { get { return nextLineOfPanels; } }
