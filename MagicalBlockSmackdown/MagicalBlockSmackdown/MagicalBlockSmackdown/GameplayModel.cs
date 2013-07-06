@@ -325,6 +325,22 @@ namespace MagicalBlockSmackdown
             }
         }
 
+        /// <summary>
+        /// Calculates the score results for a combo. This uses a quadratic formula which yields similar results to the combo scoring found in Pokemon Puzzle League (Nintendo, Intelligent Systems, 2000).
+        /// </summary>
+        /// <param name="comboCount">The number of Panels cleared in a combo.</param>
+        /// <returns>The number of points to be rewarded. Approximately equal to (0.99f * comboCount)^2.47</returns>
+        private int computeComboPoints(int comboCount)
+        {
+            // give nothing for a simple 3-block combo; that's dreary and dull.
+            if (comboCount < 4)
+            {
+                return 0;
+            }
+
+            return (int)(Math.Pow(0.99 * comboCount, 2.47));
+        }
+
         public void update(GameTime currentTime)
         {
             if (modelState == GameplayModelState.Active)
@@ -386,7 +402,7 @@ namespace MagicalBlockSmackdown
 
                 for (int i = 0; i < combosLogged; i++)
                 {
-                    //Console.WriteLine("{2} Combo {0} logged for {1} blocks", comboSet[i].Id, comboSet[i].Count, comboSet[i].Color.ToString());
+                    score += computeComboPoints(comboSet[i].Count);
                 }
 
                 combosLogged = 0;
