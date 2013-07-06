@@ -79,6 +79,29 @@ namespace MagicalBlockSmackdown
             }
         }
 
+        private struct Combo
+        {
+            private int id;
+            public int Id { get { return id; } }
+            private int count;
+            public int Count { get { return count; } set { count = value; } }
+            private PanelColor color;
+            public PanelColor Color { get { return color; } }
+
+            /// <summary>
+            /// Clears the counter for the combo, and creates a new ID.
+            /// </summary>
+            /// <returns>The new id for the combo.</returns>
+            public int Reset(PanelColor color)
+            {
+                this.id = Game1.GameRandom.Next();
+                this.count = 0;
+                this.color = color;
+
+                return this.id;
+            }
+        }
+
         private const int gridWidth = 6;
         private const int gridHeight = 12;
         public int GridWidth { get { return gridWidth; } }
@@ -101,11 +124,17 @@ namespace MagicalBlockSmackdown
         private int score;
         public int Score { get { return score; } }
 
+        private int combosLogged;
+        private Combo[] comboSet = null;
+
         public GameplayModel()
         {
             modelState = GameplayModelState.Active;
 
             score = 0;
+
+            combosLogged = 0;
+            comboSet = new Combo[8];
 
             grid = new Panel[gridWidth, gridHeight];
             nextLineOfPanels = new Panel[gridWidth];
@@ -192,7 +221,7 @@ namespace MagicalBlockSmackdown
             return false;
         }
 
-        private void explodePanels(int x, int y, bool horizontal, bool vertical)
+        private void explodePanels(int x, int y, bool horizontal, bool vertical, int comboID)
         {
             if (grid[x, y].state != PanelState.Alive || x < 0 || y < 0 || x >= grid.GetLength(0) || y >= grid.GetLength(1))
             {
@@ -200,6 +229,7 @@ namespace MagicalBlockSmackdown
             }
 
             grid[x, y].explode();
+            incrementCombo(comboID);
 
             if (horizontal)
             {
@@ -207,7 +237,7 @@ namespace MagicalBlockSmackdown
                 {
                     if (grid[x, y].color == grid[x - 1, y].color)
                     {
-                        explodePanels(x - 1, y, true, false);
+                        explodePanels(x - 1, y, true, false, comboID);
                     }
                 }
 
@@ -215,7 +245,7 @@ namespace MagicalBlockSmackdown
                 {
                     if (grid[x, y].color == grid[x + 1, y].color)
                     {
-                        explodePanels(x + 1, y, true, false);
+                        explodePanels(x + 1, y, true, false, comboID);
                     }
                 }
             }
@@ -226,7 +256,7 @@ namespace MagicalBlockSmackdown
                 {
                     if (grid[x, y].color == grid[x, y - 1].color)
                     {
-                        explodePanels(x, y - 1, false, true);
+                        explodePanels(x, y - 1, false, true, comboID);
                     }
                 }
 
@@ -234,7 +264,7 @@ namespace MagicalBlockSmackdown
                 {
                     if (grid[x, y].color == grid[x, y + 1].color)
                     {
-                        explodePanels(x, y + 1, false, true);
+                        explodePanels(x, y + 1, false, true, comboID);
                     }
                 }
             }
@@ -271,6 +301,30 @@ namespace MagicalBlockSmackdown
             scrambleNextLineOfPanels();
         }
 
+        private int newCombo(PanelColor newColor)
+        {
+            if (combosLogged == comboSet.Length)
+            {
+                Array.Resize<Combo>(ref comboSet, 2 * comboSet.Length);
+            }
+
+            int id = comboSet[combosLogged].Reset(newColor);
+            combosLogged++;
+            return id;
+        }
+
+        private void incrementCombo(int id)
+        {
+            for (int i = 0; i < combosLogged; i++)
+            {
+                if (comboSet[i].Id == id)
+                {
+                    comboSet[i].Count++;
+                    break;
+                }
+            }
+        }
+
         public void update(GameTime currentTime)
         {
             if (modelState == GameplayModelState.Active)
@@ -301,7 +355,7 @@ namespace MagicalBlockSmackdown
                             {
                                 if (checkHorzontalMatch(i, j) || checkVerticalMatch(i, j))
                                 {
-                                    explodePanels(i, j, checkHorzontalMatch(i, j), checkVerticalMatch(i, j));
+                                    explodePanels(i, j, checkHorzontalMatch(i, j), checkVerticalMatch(i, j), newCombo(grid[i, j].color));
                                 }
                             }
                         }
@@ -322,11 +376,20 @@ namespace MagicalBlockSmackdown
 
                             if (grid[i, j].explodingTime > Panel.explodingDuration)
                             {
+                                score += 10;
+
                                 grid[i, j].state = PanelState.None;
                             }
                         }
                     }
                 }
+
+                for (int i = 0; i < combosLogged; i++)
+                {
+                    //Console.WriteLine("{2} Combo {0} logged for {1} blocks", comboSet[i].Id, comboSet[i].Count, comboSet[i].Color.ToString());
+                }
+
+                combosLogged = 0;
             }
         }
     }
