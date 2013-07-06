@@ -98,9 +98,14 @@ namespace MagicalBlockSmackdown
         private int cursorY = 0;
         public int CursorY { get { return cursorY; } set { cursorY = value; } }
 
+        private int score;
+        public int Score { get { return score; } }
+
         public GameplayModel()
         {
             modelState = GameplayModelState.Active;
+
+            score = 0;
 
             grid = new Panel[gridWidth, gridHeight];
             nextLineOfPanels = new Panel[gridWidth];

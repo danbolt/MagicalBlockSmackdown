@@ -21,9 +21,10 @@ namespace MagicalBlockSmackdown
 
         private static Texture2D whitePixel = null;
         public static Texture2D WhitePixel { get { return whitePixel; } }
-
         private static Texture2D tileSheet = null;
         public static Texture2D TileSheet { get { return tileSheet; } }
+        private static SpriteFont commodore = null;
+        public static SpriteFont InGameText { get { return commodore; } }
 
         private static Random gameRand = null;
         public static Random GameRandom { get { return gameRand; } }
@@ -72,6 +73,7 @@ namespace MagicalBlockSmackdown
 
             whitePixel = Utilities.ColorTexture.Create(GraphicsDevice, Color.White);
             tileSheet = Content.Load<Texture2D>("tilesheet");
+            commodore = Content.Load<SpriteFont>("commodore");
         }
 
         /// <summary>
@@ -179,6 +181,9 @@ namespace MagicalBlockSmackdown
             GraphicsDevice.Clear(Color.CornflowerBlue);
 
             spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.NonPremultiplied, SamplerState.PointClamp, null, null);
+
+            spriteBatch.DrawString(Game1.InGameText, "Score: " + model.Score, new Vector2(200, 100), Color.Black);
+
             for (int i = 0; i < model.Grid.GetLength(0); i++)
             {
                 for (int j = 0; j < model.Grid.GetLength(1); j++)
@@ -208,10 +213,10 @@ namespace MagicalBlockSmackdown
 
                 Vector2 drawPos = new Vector2(100, 100 - (model.PushingUpValue * 16)) + new Vector2(i * 16, model.Grid.GetLength(1) * 16);
 
-                spriteBatch.Draw(tileSheet, drawPos, new Rectangle((int)(model.NextLineOfPanels[i].color) * 16, 0, 16, 16), Color.White, 0.0f, Vector2.Zero, 1, SpriteEffects.None, 0.5f);
+                spriteBatch.Draw(tileSheet, drawPos, new Rectangle((int)(model.NextLineOfPanels[i].color) * 16, 0, 16, 16), Color.Lerp(Color.White, Color.Black, 0.75f), 0.0f, Vector2.Zero, 1, SpriteEffects.None, 0.5f);
             }
 
-            if ((int)(cursorAnimationTime / 500) % 2 == 0)
+            if ((int)(cursorAnimationTime / 500) % 2 == 0) //crude animation
             {
                 spriteBatch.Draw(tileSheet, new Vector2(98, 98 - (model.PushingUpValue * 16)) + new Vector2(model.CursorX * 16, model.CursorY * 16), new Rectangle(14, 30, 19, 19), Color.White, 0.0f, Vector2.Zero, 1, SpriteEffects.None, 0.5f);
                 spriteBatch.Draw(tileSheet, new Vector2(98, 98 - (model.PushingUpValue * 16)) + new Vector2((model.CursorX + 1) * 16, model.CursorY * 16), new Rectangle(14, 30, 19, 19), Color.White, 0.0f, Vector2.Zero, 1, SpriteEffects.None, 0.5f);
