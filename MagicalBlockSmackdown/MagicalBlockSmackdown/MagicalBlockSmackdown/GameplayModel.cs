@@ -36,11 +36,16 @@ namespace MagicalBlockSmackdown
             public PanelState state;
             public float explodingTime;
             public const float explodingDuration = 300f;
+            public int chainValue;
+            public float chainWaitTime;
+            public const float chainWaitDuration = 100f;
 
             public Panel(PanelColor color, PanelState state)
             {
                 this.color = color;
                 this.state = state;
+                this.chainValue = 1;
+                this.chainWaitTime = 0;
 
                 this.explodingTime = 0;
             }
@@ -87,6 +92,8 @@ namespace MagicalBlockSmackdown
             public int Count { get { return count; } set { count = value; } }
             private PanelColor color;
             public PanelColor Color { get { return color; } }
+            private int chainValue;
+            public int ChainValue { get { return chainValue; } set { chainValue = value; } }
 
             /// <summary>
             /// Clears the counter for the combo, and creates a new ID.
@@ -97,6 +104,7 @@ namespace MagicalBlockSmackdown
                 this.id = Game1.GameRandom.Next();
                 this.count = 0;
                 this.color = color;
+                this.chainValue = 1;
 
                 return this.id;
             }
@@ -155,6 +163,33 @@ namespace MagicalBlockSmackdown
                     }
                 }
             }
+
+            /*
+            // chain combo test
+            grid[3, grid.GetLength(1) - 1].state = PanelState.Alive;
+            grid[3, grid.GetLength(1) - 1].color = PanelColor.Red;
+            grid[3, grid.GetLength(1) - 1].chainValue = 1;
+            grid[2, grid.GetLength(1) - 1].state = PanelState.Alive;
+            grid[2, grid.GetLength(1) - 1].color = PanelColor.Red;
+            grid[2, grid.GetLength(1) - 1].chainValue = 1;
+            grid[1, grid.GetLength(1) - 1].state = PanelState.Alive;
+            grid[1, grid.GetLength(1) - 1].color = PanelColor.Red;
+            grid[1, grid.GetLength(1) - 1].chainValue = 1;
+
+            grid[4, grid.GetLength(1) - 1].state = PanelState.Alive;
+            grid[4, grid.GetLength(1) - 1].color = PanelColor.Yellow;
+            grid[3, grid.GetLength(1) - 2].state = PanelState.Alive;
+            grid[3, grid.GetLength(1) - 2].color = PanelColor.Yellow;
+            grid[2, grid.GetLength(1) - 2].state = PanelState.Alive;
+            grid[2, grid.GetLength(1) - 2].color = PanelColor.Yellow;
+
+            grid[5, grid.GetLength(1) - 2].state = PanelState.Alive;
+            grid[5, grid.GetLength(1) - 2].color = PanelColor.Cyan;
+            grid[4, grid.GetLength(1) - 3].state = PanelState.Alive;
+            grid[4, grid.GetLength(1) - 3].color = PanelColor.Cyan;
+            grid[3, grid.GetLength(1) - 3].state = PanelState.Alive;
+            grid[3, grid.GetLength(1) - 3].color = PanelColor.Cyan;
+            */
         }
 
         public void pushSwap(int x, int y)
@@ -229,7 +264,7 @@ namespace MagicalBlockSmackdown
             }
 
             grid[x, y].explode();
-            incrementCombo(comboID);
+            incrementCombo(comboID, grid[x, y].chainValue);
 
             if (horizontal)
             {
@@ -313,12 +348,17 @@ namespace MagicalBlockSmackdown
             return id;
         }
 
-        private void incrementCombo(int id)
+        private void incrementCombo(int id, int chainValue)
         {
             for (int i = 0; i < combosLogged; i++)
             {
                 if (comboSet[i].Id == id)
                 {
+                    if (comboSet[i].ChainValue < chainValue)
+                    {
+                        comboSet[i].ChainValue = chainValue;
+                    }
+
                     comboSet[i].Count++;
                     break;
                 }
@@ -339,6 +379,41 @@ namespace MagicalBlockSmackdown
             }
 
             return (int)(Math.Pow(0.99 * comboCount, 2.47));
+        }
+
+        private int computeChainPoints(int chainValue)
+        {
+            switch (chainValue)
+            {
+                case 0:
+                    return 0;
+                case 1:
+                    return 0;
+                case 2:
+                    return 50;
+                case 3:
+                    return 80;
+                case 4:
+                    return 150;
+                case 5:
+                    return 300;
+                case 6:
+                    return 400;
+                case 7:
+                    return 500;
+                case 8:
+                    return 700;
+                case 9:
+                    return 900;
+                case 10:
+                    return 1100;
+                case 11:
+                    return 1300;
+                case 12:
+                    return 1500;
+                default:
+                    return 1800;
+            }
         }
 
         public void update(GameTime currentTime)
@@ -373,6 +448,16 @@ namespace MagicalBlockSmackdown
                                 {
                                     explodePanels(i, j, checkHorzontalMatch(i, j), checkVerticalMatch(i, j), newCombo(grid[i, j].color));
                                 }
+                                else if (grid[i, j].chainValue != 1)
+                                {
+                                    grid[i, j].chainWaitTime += currentTime.ElapsedGameTime.Milliseconds;
+
+                                    if (grid[i, j].chainWaitTime > Panel.chainWaitDuration)
+                                    {
+                                        grid[i, j].chainWaitTime = 0;
+                                        grid[i, j].chainValue = 1;
+                                    }
+                                }
                             }
                         }
                         else if (grid[i, j].state == PanelState.Falling)
@@ -395,6 +480,16 @@ namespace MagicalBlockSmackdown
                                 score += 10;
 
                                 grid[i, j].state = PanelState.None;
+
+                                for (int it = j - 1; it > 0; it--)
+                                {
+                                    if (grid[i, it].state != PanelState.Alive)
+                                    {
+                                        break;
+                                    }
+
+                                    grid[i, it].chainValue = (1 + grid[i, j].chainValue);
+                                }
                             }
                         }
                     }
@@ -402,7 +497,8 @@ namespace MagicalBlockSmackdown
 
                 for (int i = 0; i < combosLogged; i++)
                 {
-                    score += computeComboPoints(comboSet[i].Count);
+                    score += computeComboPoints(comboSet[i].Count) + computeChainPoints(comboSet[i].ChainValue);
+                    //Console.WriteLine("{0}-block {1} combo with chain of {2}", comboSet[i].Count, comboSet[i].Color, comboSet[i].ComboValue);
                 }
 
                 combosLogged = 0;

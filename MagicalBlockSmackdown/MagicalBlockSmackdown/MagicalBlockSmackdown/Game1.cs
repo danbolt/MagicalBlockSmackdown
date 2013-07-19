@@ -201,6 +201,11 @@ namespace MagicalBlockSmackdown
                     {
                         spriteBatch.Draw(whitePixel, drawPos + new Vector2(4), null, Color.Black, 0.0f, Vector2.Zero, 8, SpriteEffects.None, 0.5f);
                     }
+
+                    if (model.Grid[i, j].chainValue > 1)
+                    {
+                        spriteBatch.Draw(whitePixel, drawPos + new Vector2(4), null, Color.Red, 0.0f, Vector2.Zero, 8, SpriteEffects.None, 0.5f);
+                    }
                 }
             }
 
